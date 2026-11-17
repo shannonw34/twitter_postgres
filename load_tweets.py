@@ -42,35 +42,51 @@ def get_id_urls(url, connection):
     '''
     Given a url, return the corresponding id in the urls table.
     If no row exists for the url, then one is inserted automatically.
-
-    NOTE:
-    This function cannot be tested with standard python testing tools because it interacts with the db.
     '''
-    sql = sqlalchemy.sql.text('''
-    insert into urls 
-        (url)
-        values
-        (:url)
-    on conflict do nothing
-    returning id_urls
-    ;
-    ''')
-    res = connection.execute(sql,{'url':url}).first()
 
-    # when no conflict occurs, then the query above inserts a new row in the url table and returns id_urls in res[0];
-    # when a conflict occurs, then the query above does not insert or return anything;
-    # we need to run a select statement to put the already existing id_urls into res[0]
+    sql = sqlalchemy.sql.text('''
+        INSERT INTO urls (url)
+        VALUES (:url)
+        ON CONFLICT DO NOTHING
+        RETURNING id_urls;
+    ''')
+
+    res = connection.execute(sql, {'url': url}).first()
+
     if res is None:
         sql = sqlalchemy.sql.text('''
-        select id_urls 
-        from urls
-        where
-            url=:url
+            SELECT id_urls
+            FROM urls
+            WHERE url = :url;
         ''')
-        res = connection.execute(sql,{'url':url}).first()
+        res = connection.execute(sql, {'url': url}).first()
 
-    id_urls = res[0]
-    return id_urls
+    return res[0]
+
+def get_id_urls(url, connection):
+    '''
+    Given a url, return the corresponding id in the urls table.
+    If no row exists for the url, then one is inserted automatically.
+    '''
+
+    sql = sqlalchemy.sql.text('''
+        INSERT INTO urls (url)
+        VALUES (:url)
+        ON CONFLICT DO NOTHING
+        RETURNING id_urls;
+    ''')
+
+    res = connection.execute(sql, {'url': url}).first()
+
+    if res is None:
+        sql = sqlalchemy.sql.text('''
+            SELECT id_urls
+            FROM urls
+            WHERE url = :url;
+        ''')
+        res = connection.execute(sql, {'url': url}).first()
+
+    return res[0]
 
 
 def insert_tweet(connection,tweet):

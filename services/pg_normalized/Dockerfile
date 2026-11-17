@@ -1,9 +1,4 @@
-FROM postgis/postgis
-
-RUN apt-get update && apt-get install -y \
-    less \
-    make \
-    vim
+FROM postgis/postgis:13-3.5
 
 WORKDIR /tmp/db
 
