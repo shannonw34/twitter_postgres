@@ -63,31 +63,6 @@ def get_id_urls(url, connection):
 
     return res[0]
 
-def get_id_urls(url, connection):
-    '''
-    Given a url, return the corresponding id in the urls table.
-    If no row exists for the url, then one is inserted automatically.
-    '''
-
-    sql = sqlalchemy.sql.text('''
-        INSERT INTO urls (url)
-        VALUES (:url)
-        ON CONFLICT DO NOTHING
-        RETURNING id_urls;
-    ''')
-
-    res = connection.execute(sql, {'url': url}).first()
-
-    if res is None:
-        sql = sqlalchemy.sql.text('''
-            SELECT id_urls
-            FROM urls
-            WHERE url = :url;
-        ''')
-        res = connection.execute(sql, {'url': url}).first()
-
-    return res[0]
-
 
 def insert_tweet(connection,tweet):
     '''
@@ -105,20 +80,35 @@ def insert_tweet(connection,tweet):
     You'll need to add appropriate SQL insert statements to get it to work.
     '''
 
-    # skip tweet if it's already inserted
-    sql=sqlalchemy.sql.text('''
-    SELECT id_tweets 
-    FROM tweets
-    WHERE id_tweets = :id_tweets
-    ''')
-    res = connection.execute(sql,{
-        'id_tweets':tweet['id'],
-        })
-    if res.first() is not None:
-        return
-
-    # insert tweet within a transaction;
+            # insert tweet within a transaction;
     # this ensures that a tweet does not get "partially" loaded
+    with connection.begin() as trans:
+
+        # skip tweet if it's already inserted
+        sql = sqlalchemy.sql.text('''
+            SELECT id_tweets
+            FROM tweets
+            WHERE id_tweets = :id_tweets
+        ''')
+        res = connection.execute(sql, {
+            'id_tweets': tweet['id'],
+        })
+        if res.first() is not None:
+            return    # insert tweet within a transaction;
+    # this ensures that a tweet does not get "partially" loaded
+    with connection.begin() as trans:
+
+        # skip tweet if it's already inserted
+        sql = sqlalchemy.sql.text('''
+            SELECT id_tweets
+            FROM tweets
+            WHERE id_tweets = :id_tweets
+        ''')
+        res = connection.execute(sql, {
+            'id_tweets': tweet['id'],
+        })
+        if res.first() is not None:
+            return
     with connection.begin() as trans:
 
         ########################################
@@ -205,9 +195,10 @@ def insert_tweet(connection,tweet):
         geo_coords = None
 
         try:
-            geo_coords = tweet['geo']['coordinates']
-            geo_coords = str(tweet['geo']['coordinates'][0]) + ' ' + str(tweet['geo']['coordinates'][1])
+            latitude, longitude = tweet['geo']['coordinates']
+            geo_coords = f'{longitude} {latitude}'
             geo_str = 'POINT'
+
         except TypeError:
             try:
                 geo_coords = '('
